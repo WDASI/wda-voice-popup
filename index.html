@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Voice Input</title>
 </head>
 <body>
   <h3>Listening...</h3>
+
   <script>
     function startDictation() {
       if (!('webkitSpeechRecognition' in window)) {
-        window.opener.postMessage({ type: 'error', message: 'Speech recognition not supported.' }, '*');
+        try {
+          window.opener?.postMessage({ type: 'error', message: 'Speech recognition not supported' }, '*');
+        } catch (e) {
+          console.error("Unable to send error to parent", e);
+        }
         return;
       }
 
@@ -20,12 +25,20 @@
 
       recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
-        window.opener.postMessage({ type: 'speech-result', transcript }, '*');
+        try {
+          window.opener?.postMessage({ type: 'voice-result', transcript }, '*');
+        } catch (e) {
+          console.error("Failed to send voice result", e);
+        }
         window.close();
       };
 
       recognition.onerror = function(event) {
-        window.opener.postMessage({ type: 'error', message: event.error }, '*');
+        try {
+          window.opener?.postMessage({ type: 'voice-error', message: event.error }, '*');
+        } catch (e) {
+          console.error("Failed to send voice error", e);
+        }
         window.close();
       };
 
