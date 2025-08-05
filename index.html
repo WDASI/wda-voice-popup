@@ -99,7 +99,7 @@
     cancelBtn.onclick = () => {
       console.log("Voice input cancelled.");
       recognition?.abort();
-      postToOpener({ type: 'voiceCancel' });
+      window.parent.postMessage({ type: 'voiceCancel' }, "*");
       window.close();
     };
 
@@ -107,10 +107,10 @@
       const trimmed = finalTranscript.trim();
       if (trimmed) {
         console.log("Voice transcript complete:", trimmed);
-        postToOpener({ type: 'voiceTranscript', text: trimmed });
+        window.parent.postMessage({ type: 'voiceTranscript', text: trimmed }, "*");
       } else {
         console.log("No transcript to send.");
-        postToOpener({ type: 'voiceError', message: 'No transcript captured.' });
+        window.parent.postMessage({ type: 'voiceError', message: '...' }, "*");
       }
       window.close();
     };
