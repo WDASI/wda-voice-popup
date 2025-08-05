@@ -31,20 +31,25 @@
   <p>Say something...</p>
 
   <script>
-    let recognition;
-
-    function startRecognition() {
-      if (!('webkitSpeechRecognition' in window)) {
-        return showError("Speech recognition not supported in this browser.");
-      }
-
-      recognition = new webkitSpeechRecognition();
+    if (!('webkitSpeechRecognition' in window)) {
+      document.body.innerHTML = `
+        <div class="error">
+          <h2>❌ Error</h2>
+          <p>Speech recognition is not supported in this browser.</p>
+        </div>`;
+    } else {
+      const recognition = new webkitSpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = "en-US";
 
+      recognition.onstart = function () {
+        console.log("Speech recognition started");
+      };
+
       recognition.onresult = function (event) {
         const transcript = event.results[0][0].transcript;
+        console.log("Transcript:", transcript);
         if (window.opener) {
           window.opener.postMessage({ type: 'voice-result', transcript }, "*");
         }
@@ -52,43 +57,20 @@
       };
 
       recognition.onerror = function (event) {
-        showError("Error: " + event.error);
+        console.error("Recognition error:", event.error);
+        document.body.innerHTML = `
+          <div class="error">
+            <h2>❌ Error</h2>
+            <p>${event.error}</p>
+            <button class="button" onclick="location.reload()">Try Again</button>
+          </div>`;
         if (window.opener) {
           window.opener.postMessage({ type: 'voice-error', message: event.error }, "*");
         }
       };
 
-      recognition.onend = function () {
-        // If no result was captured, notify the user
-        if (!transcriptCaptured) {
-          showError("No speech detected or recognition ended too quickly.");
-        }
-      };
-
-      let transcriptCaptured = false;
-
-      recognition.onresult = function (event) {
-        transcriptCaptured = true;
-        const transcript = event.results[0][0].transcript;
-        if (window.opener) {
-          window.opener.postMessage({ type: 'voice-result', transcript }, "*");
-        }
-        window.close();
-      };
-
       recognition.start();
     }
-
-    function showError(message) {
-      document.body.className = 'error';
-      document.body.innerHTML = `
-        <h2>❌ Error</h2>
-        <p>${message}</p>
-        <button class="button" onclick="startRecognition()">Try Again</button>
-      `;
-    }
-
-    startRecognition();
   </script>
 </body>
 </html>
