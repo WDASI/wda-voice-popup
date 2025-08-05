@@ -50,6 +50,7 @@
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         statusEl.textContent = "Speech recognition not supported.";
+        window.close();
         return;
       }
 
@@ -75,33 +76,27 @@
       recognition.onerror = function(event) {
         statusEl.textContent = "Error: " + event.error;
         console.error("Speech error:", event.error);
-        window.close(); // Just close the modal
-      };
-
-      recognition.onend = function() {
-        // Optionally restart or finalize
+        window.close();
       };
 
       recognition.start();
     }
 
     cancelBtn.onclick = () => {
-      console.log("Voice input cancelled.");
       recognition?.abort();
-      window.close(); // Just close the modal
+      window.close();
     };
 
     doneBtn.onclick = () => {
       const trimmed = finalTranscript.trim();
       if (trimmed) {
-        console.log("Voice transcript complete:", trimmed);
-        const encoded = encodeURIComponent(trimmed);
-        // ✅ Redirect to your Wix handler page with transcript in query
-        window.location.href = `https://workdayawareness.com/voice-result-handler?text=${encoded}`;
+        console.log("✅ Storing transcript:", trimmed);
+        sessionStorage.setItem("voiceTranscript", trimmed); // ✅ NEW METHOD
       } else {
-        console.log("No transcript to send.");
-        window.close();
+        console.log("❌ No transcript captured.");
+        sessionStorage.setItem("voiceTranscript", "");
       }
+      window.close();
     };
 
     window.onload = initRecognition;
