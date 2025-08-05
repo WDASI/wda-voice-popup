@@ -46,20 +46,10 @@
     const cancelBtn = document.getElementById("cancelBtn");
     const doneBtn = document.getElementById("doneBtn");
 
-    function postToParent(data) {
-      try {
-        if (window.opener) window.opener.postMessage(data, '*');
-        if (window.parent) window.parent.postMessage(data, '*');
-      } catch (e) {
-        console.error("Failed to post message:", e);
-      }
-    }
-
     function initRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         statusEl.textContent = "Speech recognition not supported in this browser.";
-        postToParent({ type: 'voiceError', message: 'SpeechRecognition not supported' });
         return;
       }
 
@@ -85,8 +75,7 @@
       recognition.onerror = function(event) {
         statusEl.textContent = "Error: " + event.error;
         console.error("Speech error:", event.error);
-        postToParent({ type: 'voiceError', message: event.error });
-        window.close();
+        window.close(); // Optional: auto-close on error
       };
 
       recognition.onend = function() {
@@ -99,7 +88,6 @@
     cancelBtn.onclick = () => {
       console.log("Voice input cancelled.");
       recognition?.abort();
-      postToParent({ type: 'voiceCancel' });
       window.close();
     };
 
@@ -107,12 +95,13 @@
       const trimmed = finalTranscript.trim();
       if (trimmed) {
         console.log("Voice transcript complete:", trimmed);
-        postToParent({ type: 'voiceTranscript', text: trimmed });
+        const encoded = encodeURIComponent(trimmed);
+        // Redirect to the handler page on your Wix site
+        window.location.href = `https://workdayawareness.com/voice-result-handler?text=${encoded}`;
       } else {
         console.log("No transcript to send.");
-        postToParent({ type: 'voiceError', message: 'No transcript captured.' });
+        window.close();
       }
-      window.close();
     };
 
     window.onload = initRecognition;
