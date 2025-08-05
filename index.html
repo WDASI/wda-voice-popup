@@ -46,10 +46,19 @@
     const cancelBtn = document.getElementById("cancelBtn");
     const doneBtn = document.getElementById("doneBtn");
 
+    function postToParent(data) {
+      try {
+        if (window.opener) window.opener.postMessage(data, '*');
+        if (window.parent) window.parent.postMessage(data, '*');
+      } catch (e) {
+        console.error("Failed to post message:", e);
+      }
+    }
+
     function initRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        statusEl.textContent = "Speech recognition not supported.";
+        statusEl.textContent = "Speech recognition not supported in this browser.";
         return;
       }
 
@@ -75,49 +84,31 @@
       recognition.onerror = function(event) {
         statusEl.textContent = "Error: " + event.error;
         console.error("Speech error:", event.error);
-        try {
-          const errorMessage = { type: 'voice-error', message: event.error };
-          window.opener?.postMessage(errorMessage, '*');
-          window.parent?.postMessage(errorMessage, '*');
-        } catch (e) {
-          console.error("Failed to send error message:", e);
-        }
+        postToParent({ type: 'voice-error', message: event.error });
+      };
+
+      recognition.onend = function() {
+        // Optional: restart if needed
       };
 
       recognition.start();
     }
 
     cancelBtn.onclick = () => {
-      console.log("Cancel clicked");
+      console.log("Voice input cancelled.");
       recognition?.abort();
-
-      const cancelMessage = { type: 'voice-cancel' };
-      try {
-        window.opener?.postMessage(cancelMessage, '*');
-        window.parent?.postMessage(cancelMessage, '*');
-      } catch (e) {
-        console.error("Failed to send cancel message:", e);
-      }
-
+      postToParent({ type: 'voice-cancel' });
       window.close();
     };
 
     doneBtn.onclick = () => {
       const trimmed = finalTranscript.trim();
       if (trimmed) {
-        console.log("Sending transcript to parent:", trimmed);
-        const resultMessage = { type: 'voice-result', transcript: trimmed };
-
-        try {
-          window.opener?.postMessage(resultMessage, '*');
-          window.parent?.postMessage(resultMessage, '*');
-        } catch (e) {
-          console.error("Failed to send result message:", e);
-        }
+        console.log("Voice transcript complete:", trimmed);
+        postToParent({ type: 'voice-result', transcript: trimmed });
       } else {
         console.log("No transcript to send.");
       }
-
       window.close();
     };
 
