@@ -1,102 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Voice Input</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 40px;
-      background-color: #f1ffe7;
-    }
-    #status {
-      font-size: 1.2em;
-      margin: 20px 0;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 1em;
-      margin: 10px;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-    }
-    #cancelBtn {
-      background-color: #ffcc00;
-    }
-    #doneBtn {
-      background-color: #4CAF50;
-      color: white;
-      display: none;
-    }
-  </style>
 </head>
 <body>
-  <h2>🎙️ Listening...</h2>
-  <div id="status">Say something...</div>
-  <button id="cancelBtn">CANCEL</button>
-  <button id="doneBtn">DONE</button>
+  <div style="text-align: center; font-family: sans-serif; background: #f0f0f0; padding: 60px;">
+    <h2>Voice Assistant</h2>
+    <p>Initializing microphone access...</p>
+  </div>
 
   <script>
-    const statusEl = document.getElementById("status");
-    const cancelBtn = document.getElementById("cancelBtn");
-    const doneBtn = document.getElementById("doneBtn");
-
-    let finalTranscript = "";
     let recognition;
 
-    function initRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        statusEl.textContent = "Speech recognition not supported.";
-        cancelBtn.disabled = true;
+    function startVoiceRecognition() {
+      if (!('webkitSpeechRecognition' in window)) {
+        sendError("Speech recognition not supported in this browser.");
         return;
       }
 
-      recognition = new SpeechRecognition();
-      recognition.lang = "en-US";
-      recognition.interimResults = true;
+      recognition = new webkitSpeechRecognition();
       recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
 
-      recognition.onresult = (event) => {
-        let interim = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + " ";
-          } else {
-            interim += transcript;
-          }
-        }
-        statusEl.textContent = finalTranscript + interim;
+      recognition.onstart = function () {
+        document.body.innerHTML = `
+          <div style="text-align: center; font-family: sans-serif; background: #f0ffe8; padding: 60px;">
+            <h2>🎤 Listening...</h2>
+            <p>Say something...</p>
+          </div>`;
       };
 
-      recognition.onend = () => {
-        if (finalTranscript.trim()) {
-          doneBtn.style.display = "inline-block";
-        }
+      recognition.onresult = function (event) {
+        const transcript = event.results[0][0].transcript;
+        sendTranscript(transcript);
       };
 
-      recognition.onerror = (event) => {
-        statusEl.textContent = "Error: " + event.error;
-        console.error("Speech recognition error:", event.error);
+      recognition.onerror = function (event) {
+        sendError(event.error);
       };
 
       recognition.start();
     }
 
-    cancelBtn.onclick = () => {
-      recognition?.abort();
+    function sendTranscript(transcript) {
+      if (window.opener) {
+        window.opener.postMessage({ type: 'voice-result', transcript }, "*");
+      }
       window.close();
-    };
+    }
 
-    doneBtn.onclick = () => {
-      window.opener?.postMessage({ type: "voice-result", transcript: finalTranscript.trim() }, "*");
-      window.close();
-    };
+    function sendError(error) {
+      if (window.opener) {
+        window.opener.postMessage({ type: 'voice-error', message: error }, "*");
+      }
+      document.body.innerHTML = `
+        <div style="text-align: center; font-family: sans-serif; background: #ffeeee; padding: 60px;">
+          <h2>❌ Error</h2>
+          <p>${error}</p>
+          <button onclick="startVoiceRecognition()">Try Again</button>
+        </div>`;
+    }
 
-    window.onload = initRecognition;
+    startVoiceRecognition();
   </script>
 </body>
 </html>
