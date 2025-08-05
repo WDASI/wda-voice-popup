@@ -2,128 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta charset="UTF-8" />
   <title>Voice Input</title>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
-      padding: 40px;
-      background-color: #f1ffe7;
+      background: #f0ffe8;
+      padding: 60px;
     }
-    #status {
-      font-size: 1.2em;
-      margin: 20px 0;
+    h2 {
+      font-size: 2em;
     }
-    button {
+    .error {
+      background-color: #ffeeee;
+    }
+    .button {
+      margin-top: 20px;
       padding: 10px 20px;
-      font-size: 1em;
-      margin: 10px;
-      cursor: pointer;
+      font-size: 16px;
+      background: #ffc107;
       border: none;
-      border-radius: 5px;
-    }
-    #cancelBtn {
-      background-color: #ffcc00;
-    }
-    #doneBtn {
-      background-color: #4CAF50;
-      color: white;
-      display: none;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h3>Listening...</h3>
-  <h2>🎙️ Listening...</h2>
-  <div id="status">Say something...</div>
-  <button id="cancelBtn">CANCEL</button>
-  <button id="doneBtn">DONE</button>
+  <h2>🎤 Listening...</h2>
+  <p>Say something...</p>
 
   <script>
-    function startDictation() {
-      if (!('webkitSpeechRecognition' in window)) {
-        try {
-          window.opener?.postMessage({ type: 'error', message: 'Speech recognition not supported' }, '*');
-        } catch (e) {
-          console.error("Unable to send error to parent", e);
-        }
-    const statusEl = document.getElementById("status");
-    const cancelBtn = document.getElementById("cancelBtn");
-    const doneBtn = document.getElementById("doneBtn");
-
-    let finalTranscript = "";
     let recognition;
 
-    function initRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        statusEl.textContent = "Speech recognition not supported.";
-        cancelBtn.disabled = true;
-        return;
+    function startRecognition() {
+      if (!('webkitSpeechRecognition' in window)) {
+        return showError("Speech recognition not supported in this browser.");
       }
 
-      const recognition = new webkitSpeechRecognition();
-      recognition = new SpeechRecognition();
-      recognition.lang = "en-US";
-      recognition.interimResults = true;
+      recognition = new webkitSpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      recognition.lang = "en-US";
 
-      recognition.onresult = function(event) {
+      recognition.onresult = function (event) {
         const transcript = event.results[0][0].transcript;
-        try {
-          window.opener?.postMessage({ type: 'voice-result', transcript }, '*');
-        } catch (e) {
-          console.error("Failed to send voice result", e);
-
-      recognition.onresult = (event) => {
-        let interim = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + " ";
-          } else {
-            interim += transcript;
-          }
-        }
-        window.close();
-        statusEl.textContent = finalTranscript + interim;
-      };
-
-      recognition.onerror = function(event) {
-        try {
-          window.opener?.postMessage({ type: 'voice-error', message: event.error }, '*');
-        } catch (e) {
-          console.error("Failed to send voice error", e);
-      recognition.onend = () => {
-        if (finalTranscript.trim()) {
-          doneBtn.style.display = "inline-block";
+        if (window.opener) {
+          window.opener.postMessage({ type: 'voice-result', transcript }, "*");
         }
         window.close();
       };
 
-      recognition.onerror = (event) => {
-        statusEl.textContent = "Error: " + event.error;
-        console.error("Speech recognition error:", event.error);
+      recognition.onerror = function (event) {
+        showError("Error: " + event.error);
+        if (window.opener) {
+          window.opener.postMessage({ type: 'voice-error', message: event.error }, "*");
+        }
+      };
+
+      recognition.onend = function () {
+        // If no result was captured, notify the user
+        if (!transcriptCaptured) {
+          showError("No speech detected or recognition ended too quickly.");
+        }
+      };
+
+      let transcriptCaptured = false;
+
+      recognition.onresult = function (event) {
+        transcriptCaptured = true;
+        const transcript = event.results[0][0].transcript;
+        if (window.opener) {
+          window.opener.postMessage({ type: 'voice-result', transcript }, "*");
+        }
+        window.close();
       };
 
       recognition.start();
     }
 
-    startDictation();
-    cancelBtn.onclick = () => {
-      recognition?.abort();
-      window.close();
-    };
+    function showError(message) {
+      document.body.className = 'error';
+      document.body.innerHTML = `
+        <h2>❌ Error</h2>
+        <p>${message}</p>
+        <button class="button" onclick="startRecognition()">Try Again</button>
+      `;
+    }
 
-    doneBtn.onclick = () => {
-      window.opener?.postMessage({ type: "voice-result", transcript: finalTranscript.trim() }, "*");
-      window.close();
-    };
-
-    window.onload = initRecognition;
+    startRecognition();
   </script>
 </body>
 </html>
