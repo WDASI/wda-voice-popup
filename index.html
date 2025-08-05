@@ -50,7 +50,7 @@
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         statusEl.textContent = "Speech recognition not supported.";
-        window.location.href = "/practitionerroleplaylab"; // fallback
+        window.close(); // ✅ Close the modal if unsupported
         return;
       }
 
@@ -76,7 +76,7 @@
       recognition.onerror = function(event) {
         statusEl.textContent = "Error: " + event.error;
         console.error("Speech error:", event.error);
-        window.location.href = "/practitionerroleplaylab";
+        window.close(); // ✅ Close the modal on error
       };
 
       recognition.start();
@@ -84,8 +84,8 @@
 
     cancelBtn.onclick = () => {
       console.log("⛔ Voice input cancelled.");
-      sessionStorage.setItem("voiceTranscript", ""); // Store blank to avoid hang
-      window.location.href = "/practitionerroleplaylab";
+      sessionStorage.setItem("voiceTranscript", ""); // Optional: store empty to signal cancel
+      window.close(); // ✅ Close without redirect
     };
 
     doneBtn.onclick = () => {
@@ -97,7 +97,7 @@
         console.log("⚠️ No transcript captured.");
         sessionStorage.setItem("voiceTranscript", "");
       }
-      window.location.href = "/practitionerroleplaylab";
+      window.close(); // ✅ Let Wix handle reloading the transcript
     };
 
     window.onload = initRecognition;
