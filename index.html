@@ -46,20 +46,10 @@
     const cancelBtn = document.getElementById("cancelBtn");
     const doneBtn = document.getElementById("doneBtn");
 
-    function postToOpener(message) {
-      try {
-        window.opener?.postMessage(message, "*");
-      } catch (e) {
-        console.error("Unable to post message:", e);
-      }
-    }
-
     function initRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         statusEl.textContent = "Speech recognition not supported.";
-        postToOpener({ type: 'voiceError', message: 'Speech recognition not supported' });
-        window.close();
         return;
       }
 
@@ -85,12 +75,11 @@
       recognition.onerror = function(event) {
         statusEl.textContent = "Error: " + event.error;
         console.error("Speech error:", event.error);
-        postToOpener({ type: 'voiceError', message: event.error });
-        window.close();
+        window.close(); // Just close the modal
       };
 
       recognition.onend = function() {
-        // Optional restart logic here
+        // Optionally restart or finalize
       };
 
       recognition.start();
@@ -99,20 +88,20 @@
     cancelBtn.onclick = () => {
       console.log("Voice input cancelled.");
       recognition?.abort();
-      window.parent.postMessage({ type: 'voiceCancel' }, "*");
-      window.close();
+      window.close(); // Just close the modal
     };
 
     doneBtn.onclick = () => {
       const trimmed = finalTranscript.trim();
       if (trimmed) {
         console.log("Voice transcript complete:", trimmed);
-        window.parent.postMessage({ type: 'voiceTranscript', text: trimmed }, "*");
+        const encoded = encodeURIComponent(trimmed);
+        // ✅ Redirect to your Wix handler page with transcript in query
+        window.location.href = `https://workdayawareness.com/voice-result-handler?text=${encoded}`;
       } else {
         console.log("No transcript to send.");
-        window.parent.postMessage({ type: 'voiceError', message: '...' }, "*");
+        window.close();
       }
-      window.close();
     };
 
     window.onload = initRecognition;
