@@ -76,9 +76,9 @@
         statusEl.textContent = "Error: " + event.error;
         console.error("Speech error:", event.error);
         try {
-          window.opener?.postMessage({ type: 'voice-error', message: event.error }, '*');
+          window.parent.postMessage({ type: 'voice-error', message: event.error }, '*');
         } catch (e) {
-          console.error("Failed to send error to opener", e);
+          console.error("Failed to send error to parent", e);
         }
       };
 
@@ -86,14 +86,18 @@
     }
 
     cancelBtn.onclick = () => {
+      console.log("Cancel clicked");
       recognition?.abort();
       window.close();
     };
 
     doneBtn.onclick = () => {
       const trimmed = finalTranscript.trim();
-      if (trimmed && window.opener) {
-        window.opener.postMessage({ type: 'voice-result', transcript: trimmed }, '*');
+      if (trimmed) {
+        console.log("Sending transcript to parent:", trimmed);
+        window.parent.postMessage({ type: 'voice-result', transcript: trimmed }, '*');
+      } else {
+        console.log("Nothing to send.");
       }
       window.close();
     };
