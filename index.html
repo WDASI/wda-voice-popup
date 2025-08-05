@@ -1,78 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Voice Input</title>
 </head>
 <body>
   <div style="text-align: center; font-family: sans-serif; background: #f0f0f0; padding: 60px;">
     <h2>Voice Assistant</h2>
-    <p>Initializing microphone access...</p>
+    <p>Initializing microphone…</p>
   </div>
 
   <script>
-    let recognition;
-
-    function startVoiceRecognition() {
-      if (!('webkitSpeechRecognition' in window)) {
-        sendError("Speech recognition not supported in this browser.");
+    function startRecognition() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) {
+        showError("Speech recognition not supported.");
         return;
       }
 
-      recognition = new webkitSpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = "en-US";
+      const rec = new SpeechRec();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = "en-US";
 
-      recognition.onstart = function () {
+      rec.onstart = () => {
         document.body.innerHTML = `
-          <div style="text-align: center; font-family: sans-serif; background: #eaffea; padding: 60px;">
-            <h2>🎤 <strong>Listening...</strong></h2>
-            <p>Say something...</p>
+          <div style="text-align:center;padding:60px;background:#e8f9e8;font-family:sans-serif;">
+            <h2>🎤 Listening…</h2><p>Say something.</p>
           </div>`;
-        console.log("Speech recognition started.");
       };
 
-      recognition.onresult = function (event) {
-        console.log("Speech result event:", event);
-        const transcript = event.results[0][0].transcript;
-        sendTranscript(transcript);
+      rec.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        sendTranscript(text);
+        rec.stop();
       };
 
-      recognition.onerror = function (event) {
-        console.error("Speech recognition error:", event.error);
-        sendError(event.error);
+      rec.onerror = (e) => {
+        console.error("Recognition error:", e.error);
+        showError(e.error);
       };
 
-      recognition.onend = function () {
-        console.log("Speech recognition ended.");
-        // If no speech was captured, show an error
-        sendError("No speech detected or recognition ended too quickly.");
+      rec.onend = () => {
+        showError("No speech detected.");
       };
 
-      recognition.start();
+      rec.start();
     }
 
-    function sendTranscript(transcript) {
+    function sendTranscript(text) {
       if (window.opener) {
-        window.opener.postMessage({ type: 'voice-result', transcript }, "*");
+        window.opener.postMessage({ type: "voice-result", transcript: text }, "*");
       }
       window.close();
     }
 
-    function sendError(error) {
+    function showError(err) {
       if (window.opener) {
-        window.opener.postMessage({ type: 'voice-error', message: error }, "*");
+        window.opener.postMessage({ type: "voice-error", message: err }, "*");
       }
       document.body.innerHTML = `
-        <div style="text-align: center; font-family: sans-serif; background: #ffeeee; padding: 60px;">
-          <h2>❌ Error</h2>
-          <p>${error}</p>
-          <button onclick="startVoiceRecognition()">Try Again</button>
+        <div style="text-align:center;padding:60px;background:#ffeded;font-family:sans-serif;">
+          <h2>❌ Error</h2><p>${err}</p>
+          <button onclick="startRecognition()">Try Again</button>
         </div>`;
     }
 
-    startVoiceRecognition();
+    startRecognition();
   </script>
 </body>
 </html>
