@@ -50,7 +50,7 @@
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         statusEl.textContent = "Speech recognition not supported.";
-        window.close();
+        window.location.href = "/practitionerroleplaylab"; // fallback
         return;
       }
 
@@ -76,27 +76,28 @@
       recognition.onerror = function(event) {
         statusEl.textContent = "Error: " + event.error;
         console.error("Speech error:", event.error);
-        window.close();
+        window.location.href = "/practitionerroleplaylab";
       };
 
       recognition.start();
     }
 
     cancelBtn.onclick = () => {
-      recognition?.abort();
-      window.close();
+      console.log("⛔ Voice input cancelled.");
+      sessionStorage.setItem("voiceTranscript", ""); // Store blank to avoid hang
+      window.location.href = "/practitionerroleplaylab";
     };
 
     doneBtn.onclick = () => {
       const trimmed = finalTranscript.trim();
       if (trimmed) {
         console.log("✅ Storing transcript:", trimmed);
-        sessionStorage.setItem("voiceTranscript", trimmed); // ✅ NEW METHOD
+        sessionStorage.setItem("voiceTranscript", trimmed);
       } else {
-        console.log("❌ No transcript captured.");
+        console.log("⚠️ No transcript captured.");
         sessionStorage.setItem("voiceTranscript", "");
       }
-      window.close();
+      window.location.href = "/practitionerroleplaylab";
     };
 
     window.onload = initRecognition;
