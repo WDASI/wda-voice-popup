@@ -1,69 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Voice Input</title>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
-      background: #f0ffe8;
-      padding: 60px;
+      padding: 40px;
+      background-color: #f1ffe7;
     }
-    h2 {
-      font-size: 2em;
-    }
-    .error {
-      background-color: #ffeeee;
+    #status {
+      font-size: 1.2em;
+      margin: 20px 0;
     }
     button {
-      margin-top: 20px;
       padding: 10px 20px;
-      font-size: 16px;
-      background: #ffc107;
-      border: none;
+      font-size: 1em;
+      margin: 10px;
       cursor: pointer;
+      border: none;
+      border-radius: 5px;
+    }
+    #cancelBtn {
+      background-color: #ffcc00;
+    }
+    #doneBtn {
+      background-color: #4CAF50;
+      color: white;
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h2>🎤 Listening...</h2>
-  <p>Say something...</p>
+  <h2>🎙️ Listening...</h2>
+  <div id="status">Say something...</div>
+  <button id="cancelBtn">CANCEL</button>
+  <button id="doneBtn">DONE</button>
 
   <script>
-    const recognition = new webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
+    let finalTranscript = "";
+    let recognition;
 
-    recognition.onresult = function(event) {
-      const transcript = event.results[0][0].transcript;
-      console.log("Transcript:", transcript);
-      if (window.opener) {
-        window.opener.postMessage({ type: "voice-result", transcript }, "*");
+    const statusEl = document.getElementById("status");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const doneBtn = document.getElementById("doneBtn");
+
+    function initRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        statusEl.textContent = "Speech recognition not supported.";
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onresult = function(event) {
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + " ";
+          } else {
+            interim += transcript;
+          }
+        }
+        statusEl.textContent = finalTranscript + interim;
+        doneBtn.style.display = "inline-block";
+      };
+
+      recognition.onerror = function(event) {
+        statusEl.textContent = "Error: " + event.error;
+        console.error("Speech error:", event.error);
+        try {
+          window.opener?.postMessage({ type: 'voice-error', message: event.error }, '*');
+        } catch (e) {
+          console.error("Failed to send error to opener", e);
+        }
+      };
+
+      recognition.start();
+    }
+
+    cancelBtn.onclick = () => {
+      recognition?.abort();
+      window.close();
+    };
+
+    doneBtn.onclick = () => {
+      const trimmed = finalTranscript.trim();
+      if (trimmed && window.opener) {
+        window.opener.postMessage({ type: 'voice-result', transcript: trimmed }, '*');
       }
       window.close();
     };
 
-    recognition.onerror = function(event) {
-      console.error("Speech error:", event.error);
-      document.body.innerHTML = `
-        <div class="error">
-          <h2>❌ Error</h2>
-          <p>${event.error}</p>
-          <button onclick="location.reload()">Try Again</button>
-        </div>
-      `;
-      if (window.opener) {
-        window.opener.postMessage({ type: "voice-error", message: event.error }, "*");
-      }
-    };
-
-    recognition.onend = function() {
-      console.log("Speech recognition ended.");
-    };
-
-    recognition.start();
+    window.onload = initRecognition;
   </script>
 </body>
 </html>
