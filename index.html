@@ -59,6 +59,7 @@
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         statusEl.textContent = "Speech recognition not supported in this browser.";
+        postToParent({ type: 'voiceError', message: 'SpeechRecognition not supported' });
         return;
       }
 
@@ -84,7 +85,8 @@
       recognition.onerror = function(event) {
         statusEl.textContent = "Error: " + event.error;
         console.error("Speech error:", event.error);
-        postToParent({ type: 'voice-error', message: event.error });
+        postToParent({ type: 'voiceError', message: event.error });
+        window.close();
       };
 
       recognition.onend = function() {
@@ -97,7 +99,7 @@
     cancelBtn.onclick = () => {
       console.log("Voice input cancelled.");
       recognition?.abort();
-      postToParent({ type: 'voice-cancel' });
+      postToParent({ type: 'voiceCancel' });
       window.close();
     };
 
@@ -105,9 +107,10 @@
       const trimmed = finalTranscript.trim();
       if (trimmed) {
         console.log("Voice transcript complete:", trimmed);
-        postToParent({ type: 'voice-result', transcript: trimmed });
+        postToParent({ type: 'voiceTranscript', text: trimmed });
       } else {
         console.log("No transcript to send.");
+        postToParent({ type: 'voiceError', message: 'No transcript captured.' });
       }
       window.close();
     };
